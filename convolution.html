@@ -62,8 +62,15 @@
 			var sharpenKernel = 
 			[
 			  [0,-1,0],
-			  [-1,5,-1],
+			  [-1,14,-1],
 			  [0,-1,0]			
+			];
+			
+			var customKernel = 
+			[
+			  [0,-1,0],
+			  [-1,14,-1],
+			  [0,-1,0]
 			];
 			
 			
@@ -85,7 +92,7 @@
 				}
 				
 				//apply the correct kernerl convolution effect
-				var kernel = sharpenKernel; //use the blur kernel
+				var kernel = customKernel; //use the blur kernel
 				var errors = 0;
 				for(var y = 0; y < height; y++){
 					for(x = 0; x < width; x++){
