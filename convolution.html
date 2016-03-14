@@ -4,6 +4,7 @@
 		<meta charset="UTF-8"/>
 		<meta http-equiv="X-UA-Compatible" content="IE=Edge">
 		<title>Edge Detection with Canvas</title>
+		<script src="edge-detection.js"></script>
 		<style>
 			cavas{
 				margin:5px;
@@ -45,41 +46,7 @@
 			var levels = 0;
 			var tolerance = 0;
 			
-			var blurKernel = 
-			[
-			  [1,1,1],
-			  [1,1,1],
-			  [1,1,1]			
-			];
-			
-			var edgeKernel = 
-			[
-			  [0,0,0],
-			  [-9,9,0],
-			  [0,0,0]				
-			];
-			
-			var edge2Kernel = 
-			[
-			  [0,9,0],
-			  [9,-36,9],
-			  [0,9,0]
-			];
-			
-			var sharpenKernel = 
-			[
-			  [0,-9,0],
-			  [-9,45,-9],
-			  [0,-9,0]			
-			];	
-			
-			var outlineKernel = 
-			[
-			  [6,6,6],
-			  [4,-36,6],
-			  [6,6,6]
-			];
-			
+						
 			var customKernel = 
 			[
 			  [4,0,4],
@@ -95,63 +62,12 @@
 			};
 			
 			var renderOutput = function(){
-				//grab all the image data....
-				for(var y = 0; y< height; y++){
-					if(imageData[y] == undefined) imageData[y] = [];
-					for(x = 0; x < width; x++){
-						var pixel = ctx.getImageData(x, y, 1, 1);
-						if(imageData[x] == undefined) imageData[x] = [];
-						imageData[x][y] = pixel;
-					}
-				}
-				
-				//apply the correct kernerl convolution effect
-				var kernel = customKernel; //use the blur kernel
-				var errors = 0;
-				for(var y = 0; y < height; y++){
-					for(x = 0; x < width; x++){
-						
-						//check to make sure that the pixel exists, otherwise do not use it
-						//we're using a 3x3 matrix so only 9 cycles for each pixel
-						var cord = {};
-						var pixelVal = [0,0,0];
-						for(i=0; i<3; i++){
-							cord.y = y + i -1;
-							
-							for(j=0; j<3; j++){
-								cord.x = x + j - 1;
-								
-								try{
-									var tempPixel = imageData[cord.x][cord.y];
-									
-									if(tempPixel != undefined){
-										var r = tempPixel.data[0];
-										var g = tempPixel.data[1];
-										var b = tempPixel.data[2];
-										
-										pixelVal[0] += kernel[j][i] * r;
-										pixelVal[1] += kernel[j][i] * g;
-										pixelVal[2] += kernel[j][i] * b;  
-									}
-								}catch(error){
-									//console.log("pixel does not exist at " + cord.x + "," + cord.y);
-								}
-							}
-						}
-						
-						pixelVal[0] = Math.ceil(pixelVal[0]/9);
-						pixelVal[1] = Math.ceil(pixelVal[1]/9);
-						pixelVal[2] = Math.ceil(pixelVal[2]/9);
-						
-						//render out each pixel
-						color1D = 'rgb(' + imageData[x][y].data[0] + ',' + imageData[x][y].data[1] + ',' + imageData[x][y].data[2] + ')';
-						colorBlur = 'rgb(' + pixelVal[0] + ',' + pixelVal[1] + ',' + pixelVal[2] + ')';
-						ctxOutput.fillStyle = colorBlur;
-					    ctxOutput.fillRect(x,y,1,1);
-					}
-				}
+				imageData = $ED.getPixelData(width, height, ctx); //grab all image data
+				imageData = $ED.convertImage2grayscale(width, height, imageData); //convert image to grayscale
+				imageData = $ED.matrixTransform('edgeDetect', 1.5, width, height, imageData);
+				imageData = $ED.invertImage(width, height, imageData);
+				$ED.renderImage(width, height, imageData, ctxOutput);
 			};
-			
 		</script>
 	</body>
 </html>
