@@ -54,23 +54,37 @@
 			
 			var edgeKernel = 
 			[
-			  [-1,-1,-1],
-			  [-1,8,-1],
-			  [-1,1,-1]				
+			  [0,0,0],
+			  [-9,9,0],
+			  [0,0,0]				
+			];
+			
+			var edge2Kernel = 
+			[
+			  [0,9,0],
+			  [9,-36,9],
+			  [0,9,0]
 			];
 			
 			var sharpenKernel = 
 			[
-			  [0,-1,0],
-			  [-1,14,-1],
-			  [0,-1,0]			
+			  [0,-9,0],
+			  [-9,45,-9],
+			  [0,-9,0]			
+			];	
+			
+			var outlineKernel = 
+			[
+			  [6,6,6],
+			  [4,-36,6],
+			  [6,6,6]
 			];
 			
 			var customKernel = 
 			[
-			  [0,-1,0],
-			  [-1,14,-1],
-			  [0,-1,0]
+			  [4,0,4],
+			  [0,-14,0],
+			  [4,0,4]
 			];
 			
 			
@@ -129,6 +143,7 @@
 						pixelVal[1] = Math.ceil(pixelVal[1]/9);
 						pixelVal[2] = Math.ceil(pixelVal[2]/9);
 						
+						//render out each pixel
 						color1D = 'rgb(' + imageData[x][y].data[0] + ',' + imageData[x][y].data[1] + ',' + imageData[x][y].data[2] + ')';
 						colorBlur = 'rgb(' + pixelVal[0] + ',' + pixelVal[1] + ',' + pixelVal[2] + ')';
 						ctxOutput.fillStyle = colorBlur;
