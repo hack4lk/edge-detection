@@ -25,12 +25,12 @@
 			<input type="text" id="offset"  name="offset" value="2" style="width:20px;"> Pixel Offset: (size of line) <br /><br />
 		</span>
 		
-		<canvas id="imageCanvas" width="150" height="150"> </canvas>
-		<canvas id="resultimageCanvas" width="150" height="150"> </canvas>
+		<canvas id="imageCanvas" width="300" height="300"> </canvas>
+		<canvas id="resultimageCanvas" width="300" height="300"> </canvas>
 		
 		<script>
 			var img = new Image();
-			img.src="p3.jpg";
+			img.src="clown.jpg";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
@@ -40,19 +40,17 @@
 			var diffImage = [];
 		
 			var imgData = null;
-			var width = 150;
-			var height = 150;
+			var width = 300;
+			var height = 300;
 			var pixelOffset = 0;
 			var levels = 0;
 			var tolerance = 0;
 			
 						
-			var customKernel = 
-			[
+			var customKernel = [
 			  [4,0,4],
 			  [0,-14,0],
-			  [4,0,4]
-			];
+			  [4,0,4]];
 			
 			
 			img.onload = function(){
@@ -62,11 +60,25 @@
 			};
 			
 			var renderOutput = function(){
-				imageData = $ED.getPixelData(width, height, ctx); //grab all image data
-				imageData = $ED.convertImage2grayscale(width, height, imageData); //convert image to grayscale
-				imageData = $ED.matrixTransform('edgeDetect', 1.5, width, height, imageData);
-				imageData = $ED.invertImage(width, height, imageData);
+				//grab all image data (with true flag (last paramter), it converts to grayscale right away)
+				imageData = $ED.getPixelData(width, height, ctx, false); 
+				
+				//convert image to grayscale
+				imageData = $ED.convertImage2grayscale(width, height, imageData); 
+				
+				//we blur the image to initially remove noise artifacts
+				imageData = $ED.matrixTransform('blur', 1, width, height, imageData); //apply the chosen effect
+				
+				//use Sobel convolution kernel to get the gradient for x and y of the image
+				imageData = $ED.getGradientApproximation(width, height, imageData);
+				
+				//output data....
 				$ED.renderImage(width, height, imageData, ctxOutput);
+				
+				
+				
+				//imageData = $ED.invertImage(width, height, imageData);
+				
 			};
 		</script>
 	</body>

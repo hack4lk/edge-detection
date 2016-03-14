@@ -57,6 +57,7 @@
 			return imageData;
 		};
 		
+		
 		//converts entire image data to grayscale
 		that.invertImage = function(width, height, imageBitmapDataArray){
 			var imageData = [];
@@ -80,7 +81,27 @@
 		that.renderPixel = function(x, y, colorArr, imageContext){
 			colorCustom = 'rgb(' + colorArr[0] + ',' + colorArr[1] + ',' + colorArr[2] + ')';
 			imageContext.fillStyle = colorCustom;
-		    imageContext.fillRect(x, y, 1, 1);
+			imageContext.fillRect(x, y, 1, 1);
+		};
+		
+		
+		that.combineImageData = function(width, height, imageBitmapDataArray1, imageBitmapDataArray2){
+			var imageData = [];
+			for(var y = 0; y < height; y++){
+				if(imageData[y] == undefined) imageData[y] = [];
+				
+				for(x = 0; x < width; x++){
+					if(imageData[x] == undefined) imageData[x] = [];
+					var pixel1 = imageBitmapDataArray1[x][y];
+					var pixel2 = imageBitmapDataArray2[x][y];
+					var combinedPixel = [];
+					combinedPixel[0] = pixel1[0] + pixel2[0];
+					combinedPixel[1] = pixel1[1] + pixel2[1];
+					combinedPixel[2] = pixel1[2] + pixel2[2];
+					imageData[x][y] = combinedPixel;
+				}
+			}
+			return imageData;
 		};
 		
 		
@@ -100,51 +121,100 @@
 		};
 		
 		
-		//convolution transformation method to changes image data
+		that.getGradientApproximation = function(width, height, imageBitmapDataArray){
+			var imageData = [];
+			var matrixSize = 3;
+			
+			var SobelGx =[
+			  [-1,0,1],
+			  [-2,0,2],
+			  [-1,0,1]];
+		
+			var SobelGy =[
+			  [ 1, 2, 1],
+			  [ 0, 0, 0],
+			  [-1,-2,-1]];
+			  
+			for(var y = 0; y < height; y++){
+				if(imageData[y] == undefined) imageData[y] = [];
+				for(x = 0; x < width; x++){
+					if(imageData[x] == undefined) imageData[x] = [];
+					var cord = {};
+					var pixelVal = [0,0,0];
+					var pixel = imageBitmapDataArray[x][y];
+					var sumX = 0;
+					var sumY = 0;
+					var sum = 0;
+					
+					for(i=0; i<matrixSize; i++){
+						for(j=0; j<matrixSize; j++){
+							cord.y = y + i - 1;
+							cord.x = x + j - 1;
+								
+							try{
+								var tempPixel = imageBitmapDataArray[cord.x][cord.y];
+								
+								if(tempPixel != undefined){
+									var grayValue = tempPixel[0];
+									sumX += SobelGx[j][i] * grayValue;
+									sumY += SobelGy[j][i] * grayValue;
+								}	
+							}catch(error){
+								//do nothing for now....
+							}
+							
+						}
+					}
+					
+					sum = Math.abs(sumX) + Math.abs(sumY);
+					
+					if(sum > 255) sum = 255;
+					if(sum < 0) sum = 0;
+					
+					pixelVal[0] = sum;
+					pixelVal[1] = sum;
+					pixelVal[2] = sum;
+					
+					imageData[x][y] = pixelVal;
+				}
+			}
+			
+			return imageData;
+		};
+		
+		
+		//convolution transformation method to change image data and apply effect
 		that.matrixTransform = function(effectName, intensity, width, height, imageBitmapDataArray, customKernel){
 			var imageData = [];
 			var kernel = null;
+			var matrixSize = null;
+			var filterBias = 0;
+			
 			var blurKernel = [
+			  [1,1,0],
 			  [1,1,1],
-			  [1,1,1],
-			  [1,1,1]];
+			  [0,1,1]];
 			
-			var edgeKernel = [
-			  [0,0,0],
-			  [-9,9,0],
-			  [0,0,0]];
-			
-			var edge2Kernel = [
-			  [0,9,0],
-			  [9,-36,9],
-			  [0,9,0]];
-			
-			var sharpenKernel =[
-			  [0,-1,0],
-			  [-1,13,-1],
-			  [0,-1,0]];	
-			
-			var outlineKernel = [
-			  [6,6,6],
-			  [4,-36,6],
-			  [6,6,6]];
+			var sharpenKernel = [
+			  [ 0,-1, 0],
+			  [-1, 5,-1],
+			  [ 0,-1, 0]];	
 			  
+			var edgeKernel = [
+			  [-1,-1,-1],
+			  [-1, 8,-1],
+			  [-1,-1,-1]];
+			
 			  
 			switch(effectName){
 				case 'blur':
 					kernel = blurKernel;
 					break;
-				case 'edgeHightlight':
-					kernel = edgeKernel;
-					break;
-				case 'edgeDetect':
-					kernel = edge2Kernel;
-					break;
 				case 'sharpen':
 					kernel = sharpenKernel;
 					break;
-				case 'outline':
-					kernel = outlineKernel;
+				case 'edgeDetect':
+					kernel = edgeKernel;
 					break;
 				case 'custom':
 					kernel = customKernel;
@@ -154,6 +224,23 @@
 					return;
 			}
 			
+			
+			//get the size of the kernel element for the transform loop before
+			matrixSize = kernel.length;
+			
+			//determin the filter bias for the kernels...
+			for(var k = 0; k < matrixSize; k++){
+				for(var l = 0; l < matrixSize; l++){
+					filterBias += kernel[k][l];
+				}
+			}
+			
+			//check for a 0-based filter bias and offset with neutral 1 if exists
+			if(filterBias == 0){
+				filterBias = 1;
+			}
+			
+			//apply intensity to the image based on intensity paramter
 			if(intensity == 'undefined' || intensity == undefined){
 				intensity = 1;
 			}
@@ -164,23 +251,22 @@
 				for(x = 0; x < width; x++){
 					if(imageData[x] == undefined) imageData[x] = [];
 					
-					//check to make sure that the pixel exists, otherwise do not use it
-					//we're using a 3x3 matrix so only 9 cycles for each pixel
 					var cord = {};
 					var pixelVal = [0,0,0];
-					for(i=0; i<3; i++){
-						cord.y = y + i -1;
+					
+					for(i=0; i<matrixSize; i++){
+						cord.y = y + i - 1;
 						
-						for(j=0; j<3; j++){
+						for(j=0; j<matrixSize; j++){
 							cord.x = x + j - 1;
 							
 							try{
 								var tempPixel = imageBitmapDataArray[cord.x][cord.y];
 								
 								if(tempPixel != undefined){
-									var r = tempPixel[0];
-									var g = tempPixel[1];
-									var b = tempPixel[2];
+									var r = tempPixel[0] / filterBias;
+									var g = tempPixel[1] / filterBias;
+									var b = tempPixel[2] / filterBias;
 									
 									pixelVal[0] += kernel[j][i] * r * intensity;
 									pixelVal[1] += kernel[j][i] * g * intensity;
@@ -192,9 +278,9 @@
 						}
 					}
 					
-					pixelVal[0] = Math.ceil(pixelVal[0]/9);
-					pixelVal[1] = Math.ceil(pixelVal[1]/9);
-					pixelVal[2] = Math.ceil(pixelVal[2]/9);
+					pixelVal[0] = Math.ceil(pixelVal[0]);
+					pixelVal[1] = Math.ceil(pixelVal[1]);
+					pixelVal[2] = Math.ceil(pixelVal[2]);
 					
 					imageData[x][y] = pixelVal;
 				}
