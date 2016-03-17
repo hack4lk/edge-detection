@@ -2,6 +2,11 @@
 	$ED = null;
 	var _ED = function(){
 		var that = {};
+				
+		that.angleDirection = [];
+		that.upperThreshold = 0;
+		that.lowerThreshold = 0;
+		
 		
 		//method to return pixel data from passed
 		//image object
@@ -121,7 +126,8 @@
 		};
 		
 		
-		that.getGradientApproximation = function(width, height, imageBitmapDataArray){
+		//Sobel gradient magnitude function to approximate gradient magnitude
+		that.getGradientAngleAndDirection = function(width, height, imageBitmapDataArray){
 			var imageData = [];
 			var matrixSize = 3;
 			
@@ -136,9 +142,11 @@
 			  [-1,-2,-1]];
 			  
 			for(var y = 0; y < height; y++){
-				if(imageData[y] == undefined) imageData[y] = [];
+				if(imageData[y] == undefined) imageData[y] = []; 
+				if(that.angleDirection[y] == undefined) that.angleDirection[y] = [];
 				for(x = 0; x < width; x++){
 					if(imageData[x] == undefined) imageData[x] = [];
+					if(that.angleDirection[x] == undefined) that.angleDirection[x] = [];
 					var cord = {};
 					var pixelVal = [0,0,0];
 					var pixel = imageBitmapDataArray[x][y];
@@ -166,8 +174,8 @@
 						}
 					}
 					
+					//calculate edge gradient sum values
 					sum = Math.abs(sumX) + Math.abs(sumY);
-					
 					if(sum > 255) sum = 255;
 					if(sum < 0) sum = 0;
 					
@@ -175,13 +183,61 @@
 					pixelVal[1] = sum;
 					pixelVal[2] = sum;
 					
+					//calculate edge direction values
+					if(sumX != 0){
+						var angleTheta = Math.atan(sumY / sumX) / 3.14159 * 180;
+					
+						if( (angleTheta < 22.5) && (angleTheta > -22.5)) angleTheta = 0;
+						if( (angleTheta > 157.5) && (angleTheta < -157.5)) angleTheta = 0;
+						
+						if( (angleTheta > 22.5) && (angleTheta < 67.5)) angleTheta = 45;
+						if( (angleTheta < -112.5) && (angleTheta > -157.5)) angleTheta = 45;
+						
+						if( (angleTheta > 67.5) && (angleTheta < 112.5)) angleTheta = 90;
+						if( (angleTheta < -67.5) && (angleTheta > -112.5)) angleTheta = 90;
+						
+						if( (angleTheta > 112.5) && (angleTheta < 157.5)) angleTheta = 135;
+						if( (angleTheta < -22.5) && (angleTheta > -67.5)) angleTheta = 135;
+					}else{
+						angleTheta = 0;
+					}
+					
+					
 					imageData[x][y] = pixelVal;
+					that.angleDirection[x][y] = angleTheta;
 				}
 			}
 			
 			return imageData;
 		};
 		
+		
+		//this method removes teh fuzzy edges of the edges and 
+		//leaves behind only the approximated true edges
+		that.setNonMaximumSuppression = function(width, height, imageBitmapDataArray){
+			var imageData = [];
+			for(var y = 0; y < height; y++){
+				if(imageData[y] == undefined) imageData[y] = [];
+				
+				for(x = 0; x < width; x++){
+					var color = [];
+					if(imageData[x] == undefined) imageData[x] = [];
+					var pixel = imageBitmapDataArray[x][y];
+					var direction = that.angleDirection[x][y];
+					
+					if(direction == 135) color = [0, 0, 255];
+					if(direction == 90)	color = [0, 255, 0];
+					if(direction == 45)	color = [255, 0, 0];
+					if(direction == 0)	color = [0, 0, 0];
+					
+					//pixel[0] = color[0];
+					//pixel[1] = color[1];
+					//pixel[2] = color[2];
+					imageData[x][y] = pixel;
+				}
+			}
+			return imageData;
+		}
 		
 		//convolution transformation method to change image data and apply effect
 		that.matrixTransform = function(effectName, intensity, width, height, imageBitmapDataArray, customKernel){

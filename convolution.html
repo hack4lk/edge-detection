@@ -18,40 +18,24 @@
 	<body>
 		
 		<button onclick="renderOutput();">Render Output</button> <br /><br />
-		
-		<span style="display:none">
-			<input type="text" id="tolerance"  name="tolerance" value="12" style="width:20px;"> Tolerance: (0-100)<br />
-			<input type="text" id="levels"  name="levels" value="0" style="width:20px;"> Levels Enhancement: (contrast increase) <br />
-			<input type="text" id="offset"  name="offset" value="2" style="width:20px;"> Pixel Offset: (size of line) <br /><br />
-		</span>
-		
-		<canvas id="imageCanvas" width="300" height="300"> </canvas>
-		<canvas id="resultimageCanvas" width="300" height="300"> </canvas>
+		<div id="timing" style="margin-bottom:15px;">...</div>
+		<canvas id="imageCanvas" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas" width="150" height="150"> </canvas>
 		
 		<script>
 			var img = new Image();
-			img.src="clown.jpg";
+			img.src="clown150.jpg";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
 			var outputCanvas = document.getElementById('resultimageCanvas');
 			var ctxOutput = outputCanvas.getContext('2d');
 			var imageData = [];
-			var diffImage = [];
-		
-			var imgData = null;
-			var width = 300;
-			var height = 300;
-			var pixelOffset = 0;
-			var levels = 0;
-			var tolerance = 0;
-			
-						
-			var customKernel = [
-			  [4,0,4],
-			  [0,-14,0],
-			  [4,0,4]];
-			
+			var width = 150;
+			var height = 150;
+			$ED.upperThreshold = 60;
+			$ED.lowerThreshold = 30;
+							
 			
 			img.onload = function(){
 				var x = 0;
@@ -60,6 +44,12 @@
 			};
 			
 			var renderOutput = function(){
+				var outputDiv = document.getElementById('timing');
+				outputDiv.innerHTML = "running image analysis...";
+				
+				var startTime = new Date();
+				startTime = startTime.getTime();
+				
 				//grab all image data (with true flag (last paramter), it converts to grayscale right away)
 				imageData = $ED.getPixelData(width, height, ctx, false); 
 				
@@ -70,14 +60,25 @@
 				imageData = $ED.matrixTransform('blur', 1, width, height, imageData); //apply the chosen effect
 				
 				//use Sobel convolution kernel to get the gradient for x and y of the image
-				imageData = $ED.getGradientApproximation(width, height, imageData);
+				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
 				
-				//output data....
+				//set the non-maximum suppression
+				$ED.setNonMaximumSuppression(width, height, imageData);
+				
+				//console.log($ED.angleDirection);
+				
+				//finally output data....
 				$ED.renderImage(width, height, imageData, ctxOutput);
+						
 				
 				
+				//determine execution time....
+				var endTime = new Date();
+				endTime = endTime.getTime();
 				
-				//imageData = $ED.invertImage(width, height, imageData);
+				var timeDelta = endTime - startTime;
+				timeDelta = "Execution time: "  + (timeDelta/1000) + " sec";
+				outputDiv.innerHTML = timeDelta;
 				
 			};
 		</script>
