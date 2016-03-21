@@ -21,15 +21,25 @@
 		<div id="timing" style="margin-bottom:15px;">...</div>
 		<canvas id="imageCanvas" width="150" height="150"> </canvas>
 		<canvas id="resultimageCanvas" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas2" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas3" width="150" height="150"> </canvas>
 		
 		<script>
 			var img = new Image();
-			img.src="clown150.jpg";
+			img.src="piece150.jpg";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
+			
 			var outputCanvas = document.getElementById('resultimageCanvas');
 			var ctxOutput = outputCanvas.getContext('2d');
+			
+			var outputCanvas2 = document.getElementById('resultimageCanvas2');
+			var ctxOutput2 = outputCanvas2.getContext('2d');
+			
+			var outputCanvas3 = document.getElementById('resultimageCanvas3');
+			var ctxOutput3 = outputCanvas3.getContext('2d');
+			
 			var imageData = [];
 			var width = 150;
 			var height = 150;
@@ -62,15 +72,19 @@
 				//use Sobel convolution kernel to get the gradient for x and y of the image
 				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
 				
-				//set the non-maximum suppression
-				$ED.setNonMaximumSuppression(width, height, imageData);
-				
-				//console.log($ED.angleDirection);
-				
-				//finally output data....
 				$ED.renderImage(width, height, imageData, ctxOutput);
-						
 				
+				//set the non-maximum suppression and apply double threshold
+				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.8, 0.2);
+				
+				$ED.renderImage(width, height, imageData, ctxOutput2);
+				
+				//set the continuity hysteresis of the image
+				imageData = $ED.setEdgeHysteresis(width, height, imageData);
+				
+				
+				//finally output edge image....
+				$ED.renderImage(width, height, imageData, ctxOutput3);
 				
 				//determine execution time....
 				var endTime = new Date();

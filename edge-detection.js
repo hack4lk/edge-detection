@@ -112,15 +112,20 @@
 		
 		//renders the image onto a canvas element
 		that.renderImage = function(width, height, imageBitmapDataArray, targetContext){
-			for(var y = 0; y < height; y++){
-				if(imageData[y] == undefined) imageData[y] = [];
-				
-				for(x = 0; x < width; x++){
-					if(imageData[x] == undefined) imageData[x] = [];
-					var pixel = imageBitmapDataArray[x][y];
-					var color = 'rgb(' + pixel[0] + ',' + pixel[1] + ',' + pixel[2] + ')';
-					targetContext.fillStyle = color;
-		    		targetContext.fillRect(x, y, 1, 1);
+			if(imageBitmapDataArray == []){
+				//image data is empty...don't do anything.
+			}else{
+				for(var y = 0; y < height; y++){
+					for(x = 0; x < width; x++){
+						try{
+							var pixel = imageBitmapDataArray[x][y];
+							var color = 'rgb(' + pixel[0] + ',' + pixel[1] + ',' + pixel[2] + ')';
+							targetContext.fillStyle = color;
+				    		targetContext.fillRect(x, y, 1, 1);
+						}catch(e){
+							//do nothing...pixel data was bad
+						}
+					}
 				}
 			}
 		};
@@ -170,7 +175,6 @@
 							}catch(error){
 								//do nothing for now....
 							}
-							
 						}
 					}
 					
@@ -214,7 +218,7 @@
 		
 		//this method removes teh fuzzy edges of the edges and 
 		//leaves behind only the approximated true edges
-		that.setNonMaximumSuppression = function(width, height, imageBitmapDataArray){
+		that.setNonMaximumSuppression = function(width, height, imageBitmapDataArray, upperThreshold, lowerThreshold){
 			var imageData = [];
 			for(var y = 0; y < height; y++){
 				if(imageData[y] == undefined) imageData[y] = [];
@@ -224,20 +228,90 @@
 					if(imageData[x] == undefined) imageData[x] = [];
 					var pixel = imageBitmapDataArray[x][y];
 					var direction = that.angleDirection[x][y];
+					var tan1pixel = [0,0,0];
+					var tan2pixel = [0,0,0];
 					
-					if(direction == 135) color = [0, 0, 255];
-					if(direction == 90)	color = [0, 255, 0];
-					if(direction == 45)	color = [255, 0, 0];
-					if(direction == 0)	color = [0, 0, 0];
+					if(direction == 135){
+						try{
+							tan1pixel = imageBitmapDataArray[x+1][y+1];
+							tan2pixel = imageBitmapDataArray[x-1][y-1];
+						}catch(e){
+						}
+					}
+					if(direction == 90){
+						try{
+							tan1pixel = imageBitmapDataArray[x-1][y];
+							tan2pixel = imageBitmapDataArray[x+1][y];
+						}catch(e){
+						}
+					}	
+					if(direction == 45){
+						try{
+							tan1pixel = imageBitmapDataArray[x-1][y+1];
+							tan2pixel = imageBitmapDataArray[x+1][y-1];
+						}catch(e){
+						}
+					}
+					if(direction == 0){
+						try{
+							tan1pixel = imageBitmapDataArray[x][y+1];
+							tan2pixel = imageBitmapDataArray[x][y-1];
+						}catch(e){
+						}
+					}	
 					
-					//pixel[0] = color[0];
-					//pixel[1] = color[1];
-					//pixel[2] = color[2];
+					if(tan1pixel == 'undefined' || typeof tan1pixel == 'undefined') tan1pixel = [0,0,0];
+					if(tan2pixel == 'undefined' || typeof tan2pixel == 'undefined') tan2pixel = [0,0,0];
+					
+					//run the threshold comparison logic to see if it's a edge pixel
+					if(tan1pixel[0] >= pixel[0] || tan2pixel[0] >= pixel[0]){
+						pixel[0] = 0;
+						pixel[1] = 0;
+						pixel[2] = 0;
+					}else{
+						//now that we know it's an edge pixel,
+						//we fine tune the edge depending if it is a strong or weak edge
+						if(pixel[0] > (upperThreshold*255)){
+							pixel[0] = 255;
+							pixel[1] = 255;
+							pixel[2] = 255;
+						}else if(pixel[0] > (lowerThreshold*255)){
+							pixel[0] = 128;
+							pixel[1] = 128;
+							pixel[2] = 128;
+						}else{
+							pixel[0] = 0;
+							pixel[1] = 0;
+							pixel[2] = 0;
+						}
+					}
+						
 					imageData[x][y] = pixel;
 				}
 			}
+
 			return imageData;
 		}
+		
+		
+		//hysteresis method to remove any edges not attached to strong edges
+		that.setEdgeHysteresis = function(width, height, imageBitmapDataArray){
+			var imageData = [];
+			for(var y = 0; y < height; y++){
+				if(imageData[y] == undefined) imageData[y] = [];
+				
+				for(x = 0; x < width; x++){
+					if(imageData[x] == undefined) imageData[x] = [];
+					
+					var pixel = imageBitmapDataArray[x][y];
+					
+					
+				}
+			}
+			
+			return imageData;
+		}
+		
 		
 		//convolution transformation method to change image data and apply effect
 		that.matrixTransform = function(effectName, intensity, width, height, imageBitmapDataArray, customKernel){
