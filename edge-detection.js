@@ -294,24 +294,85 @@
 		}
 		
 		
-		//hysteresis method to remove any edges not attached to strong edges
+		//hysteresis 8-point connection method to remove any weak edges not attached to strong edges
 		that.setEdgeHysteresis = function(width, height, imageBitmapDataArray){
+			var that = {};
 			var imageData = [];
-			for(var y = 0; y < height; y++){
-				if(imageData[y] == undefined) imageData[y] = [];
+			
+			that.width = width;
+			that.height = height;
+			that.blobs = [];
+			that.markedPixels = [];
+			that.dataSet = [];
+
+			
+			var findBlobs = function(xPos, yPos){
+				if(xPos == that.width){
+					xPos = 0;
+					yPos += 1;
+				}
 				
-				for(x = 0; x < width; x++){
-					if(imageData[x] == undefined) imageData[x] = [];
+				if(yPos == that.height){
+					console.log("end!");
+					return imageBitmapDataArray;
+				}else{
+					var pixel = imageBitmapDataArray[xPos][yPos];
 					
-					var pixel = imageBitmapDataArray[x][y];
-					
-					
+					if(pixel[0] != 0){
+						if(that.markedPixels[xPos+","+yPos] != undefined && that.markedPixels[xPos+","+yPos].marked == true){
+							//do nothing....pixel is already marked.
+						}else{
+							that.dataSet.push(xPos+","+yPos);
+							that.markedPixels[xPos+","+yPos] = {marked: true};
+							
+							DFS(xPos, yPos);
+							//that.blobs.push(  );
+						}
+					}
+					//run the function recursively...
+					xPos++;
+					findBlobs(xPos, yPos);
 				}
 			}
 			
-			return imageData;
-		}
+			//helper function to find nearest neighbor
+			var DFS = function(xPos, yPos){
+				//loop through all the neigbor pixels to detect any connected neighbors
+				
+				for(var nY = -1; nY < 2; nY++){
+					for(var nX = -1; nX < 2; nX++){
+						var offsetX = xPos + nX;
+						var offsetY = yPos + nY;
+						try{
+							var np = imageBitmapDataArray[offsetX][offsetY];
+							
+							if(np != undefined && np != 'undefined'){
+								if(np[0] != 0){
+									if(that.markedPixels[offsetX+","+offsetY] != undefined && that.markedPixels[offsetX+","+offsetY].marked == true){
+										//do nothing
+									}else{
+										console.log("pixel added - " + offsetX + "," + offsetY);
+										that.markedPixels[offsetX+","+offsetY] = {marked: true};
+										that.dataSet.push(offsetX+","+offsetY);
+										
+										DFS(offsetX, offsetY);
+										return;
+									}
+								}
+							}
+						}catch(e){
+							//do nothing
+						}
+					}
+				}
+			}
 		
+			findBlobs(0,0);
+			
+			console.log(that.dataSet);
+			//console.log(that.blobs);
+			return imageBitmapDataArray;
+		}
 		
 		//convolution transformation method to change image data and apply effect
 		that.matrixTransform = function(effectName, intensity, width, height, imageBitmapDataArray, customKernel){
