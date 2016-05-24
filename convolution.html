@@ -28,14 +28,14 @@
 		
 		<button onclick="renderOutput();">Render Output</button> <br /><br />
 		<div id="timing" style="margin-bottom:15px;">...</div>
-		<canvas id="imageCanvas" width="16" height="16"> </canvas>
-		<canvas id="resultimageCanvas" width="16" height="16"> </canvas>
-		<canvas id="resultimageCanvas2" width="16" height="16"> </canvas>
-		<canvas id="resultimageCanvas3" width="16" height="16"> </canvas>
+		<canvas id="imageCanvas" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas2" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas3" width="150" height="150"> </canvas>
 		
 		<script>
 			var img = new Image();
-			img.src="edge_test.png";
+			img.src="p3.jpg";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
@@ -50,8 +50,8 @@
 			var ctxOutput3 = outputCanvas3.getContext('2d');
 
 			var imageData = [];
-			var width = 16;
-			var height = 16;
+			var width = 150;
+			var height = 150;
 			$ED.upperThreshold = 60;
 			$ED.lowerThreshold = 30;
 							
@@ -76,24 +76,22 @@
 				imageData = $ED.convertImage2grayscale(width, height, imageData); 
 				
 				//we blur the image to initially remove noise artifacts
-				//imageData = $ED.matrixTransform('blur', 1, width, height, imageData); //apply the chosen effect
+				imageData = $ED.matrixTransform('blur', 1, width, height, imageData); //apply the chosen effect
 				
 				//use Sobel convolution kernel to get the gradient for x and y of the image
-				//imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
-				
+				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
 				$ED.renderImage(width, height, imageData, ctxOutput);
 				
 				//set the non-maximum suppression and apply double threshold
-				//imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.8, 0.2);
-				
+				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.7, 0.4);
 				$ED.renderImage(width, height, imageData, ctxOutput2);
 				
 				//set the continuity hysteresis of the image
-				imageData = $ED.setEdgeHysteresis(width, height, imageData);
+				imageData = $ED.setEdgeHysteresis(imageData);
+				//image = $ED.removeWeakEdges(width, height, imageData);
 				
-				
-				//finally output edge image....
 				$ED.renderImage(width, height, imageData, ctxOutput3);
+						
 				
 				//determine execution time....
 				var endTime = new Date();

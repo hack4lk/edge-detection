@@ -111,23 +111,42 @@
 		
 		
 		//renders the image onto a canvas element
-		that.renderImage = function(width, height, imageBitmapDataArray, targetContext){
-			if(imageBitmapDataArray == []){
-				//image data is empty...don't do anything.
-			}else{
-				for(var y = 0; y < height; y++){
-					for(x = 0; x < width; x++){
-						try{
-							var pixel = imageBitmapDataArray[x][y];
-							var color = 'rgb(' + pixel[0] + ',' + pixel[1] + ',' + pixel[2] + ')';
-							targetContext.fillStyle = color;
-				    		targetContext.fillRect(x, y, 1, 1);
-						}catch(e){
-							//do nothing...pixel data was bad
-						}
-					}
-				}
-			}
+		that.renderImage = function(width, height, imageBitmapData, targetContext){
+		    
+		    if(Array.isArray(imageBitmapData)){
+		        if(imageBitmapData == []){
+                    //image data is empty...don't do anything.
+                }else{
+                    for(var y = 0; y < height; y++){
+                        for(x = 0; x < width; x++){
+                            
+                            if(typeof imageBitmapData[x][y] == 'undefined'){
+                                var color = 'rgb(0,0,0)';
+                            }else{
+                                var pixel = imageBitmapData[x][y];
+                                var color = 'rgb(' + pixel[0] + ',' + pixel[1] + ',' + pixel[2] + ')';
+                            }
+                            targetContext.fillStyle = color;
+                            targetContext.fillRect(x, y, 1, 1);
+                        }
+                    }
+                }
+		    }else{
+		        for(var y = 0; y < height; y++){
+                    for(x = 0; x < width; x++){
+                        
+                        if(typeof imageBitmapData[x+","+y] == 'undefined'){
+                            var color = 'rgb(0,0,0)';
+                        }else{
+                            var pixel = imageBitmapData[x+","+y];
+                            var color = 'rgb(' + pixel[0] + ',' + pixel[1] + ',' + pixel[2] + ')';
+                        }
+                        targetContext.fillStyle = color;
+                        targetContext.fillRect(x, y, 1, 1);
+                    }
+                }
+		    }
+			
 		};
 		
 		
@@ -163,17 +182,12 @@
 						for(j=0; j<matrixSize; j++){
 							cord.y = y + i - 1;
 							cord.x = x + j - 1;
-								
-							try{
-								var tempPixel = imageBitmapDataArray[cord.x][cord.y];
-								
-								if(tempPixel != undefined){
-									var grayValue = tempPixel[0];
-									sumX += SobelGx[j][i] * grayValue;
-									sumY += SobelGy[j][i] * grayValue;
-								}	
-							}catch(error){
-								//do nothing for now....
+							
+							if(typeof imageBitmapDataArray[cord.x] != 'undefined' && typeof imageBitmapDataArray[cord.x][cord.y] != 'undefined'){
+							    var tempPixel = imageBitmapDataArray[cord.x][cord.y];
+							    var grayValue = tempPixel[0];
+                                sumX += SobelGx[j][i] * grayValue;
+                                sumY += SobelGy[j][i] * grayValue;
 							}
 						}
 					}
@@ -219,13 +233,12 @@
 		//this method removes teh fuzzy edges of the edges and 
 		//leaves behind only the approximated true edges
 		that.setNonMaximumSuppression = function(width, height, imageBitmapDataArray, upperThreshold, lowerThreshold){
-			var imageData = [];
+			var imageData = {};
+			var hasCounter = 0;
+			var hasBlank = 0;
 			for(var y = 0; y < height; y++){
-				if(imageData[y] == undefined) imageData[y] = [];
-				
 				for(x = 0; x < width; x++){
 					var color = [];
-					if(imageData[x] == undefined) imageData[x] = [];
 					var pixel = imageBitmapDataArray[x][y];
 					var direction = that.angleDirection[x][y];
 					var tan1pixel = [0,0,0];
@@ -285,93 +298,158 @@
 							pixel[2] = 0;
 						}
 					}
-						
-					imageData[x][y] = pixel;
+					
+					if(pixel[0] != 0){
+					    imageData[x+","+y] = pixel;
+					}
 				}
 			}
-
+			
 			return imageData;
 		}
 		
+		//simple function to remove weak edges
+		that.removeWeakEdges = function(width, height, imageBitmapDataArray){
+		    for(var y = 0; y < height; y++){
+		        for(var x = 0; x < width; x++){
+		            if(typeof imageBitmapDataArray[x][y] != 'undefined'){
+		               var pixel = imageBitmapDataArray[x][y];
+                        if(pixel[0] == 128){
+                            imageBitmapDataArray[x][y] = [0,0,0,255];
+                        } 
+		            }
+		        }
+		    }
+		};
 		
 		//hysteresis 8-point connection method to remove any weak edges not attached to strong edges
-		that.setEdgeHysteresis = function(width, height, imageBitmapDataArray){
+		that.setEdgeHysteresis = function(imageBitmapData){
 			var that = {};
 			var imageData = [];
-			
-			that.width = width;
-			that.height = height;
 			that.blobs = [];
-			that.markedPixels = [];
-			that.dataSet = [];
-
+			that.markedPixels = {};
+			that.analizedPixels = [];
+            that.blob = [];
+            that.validPoints = [];
+            that.tempC = 0;
+            that.limit = 2;
+            that.recursiveCounter = 0;
+            
+			var findBlobs = function(){
+			    for(item in imageBitmapData){
+			        
+		            var pixel = item;
+                
+                    if(typeof that.markedPixels[pixel] != 'undefined' && that.markedPixels[pixel].marked == true){
+                        //do nothing....pixel is already marked.
+                        // console.log(that.markedPixels[pixel]);
+                    }else{
+                        that.blob = [];
+                        that.recursiveCounter = 0;
+                        //that.analizedPixels = [];
+                        that.markedPixels[pixel] = {marked: true};
+                        
+                        //add seed pixel to blob
+                        that.blob.push([pixel, imageBitmapData[pixel]]);
+                        
+                        //do a forward pass....
+                        DFS(pixel);
+                        
+                        // //now do a reverse pass to make sure we didn't miss any pixels in the grouping...
+                        // if(that.analizedPixels.length > 0){
+                            // that.analizedPixels.reverse();
+                            // for(var r = 0; r < that.analizedPixels.length; r++){
+                                // DFS(that.analizedPixels[r][0], that.analizedPixels[r][1]);
+                                // that.analizedPixels.shift();
+                            // }
+                        // }
+                       // console.log(that.blob);
+                        //add the final blog...
+                        that.blobs.push(that.blob);
+                    }
+			    }
+			    
+			};
 			
-			var findBlobs = function(xPos, yPos){
-				if(xPos == that.width){
-					xPos = 0;
-					yPos += 1;
-				}
-				
-				if(yPos == that.height){
-					console.log("end!");
-					return imageBitmapDataArray;
-				}else{
-					var pixel = imageBitmapDataArray[xPos][yPos];
-					
-					if(pixel[0] != 0){
-						if(that.markedPixels[xPos+","+yPos] != undefined && that.markedPixels[xPos+","+yPos].marked == true){
-							//do nothing....pixel is already marked.
-						}else{
-							that.dataSet.push(xPos+","+yPos);
-							that.markedPixels[xPos+","+yPos] = {marked: true};
-							
-							DFS(xPos, yPos);
-							//that.blobs.push(  );
-						}
-					}
-					//run the function recursively...
-					xPos++;
-					findBlobs(xPos, yPos);
-				}
-			}
 			
 			//helper function to find nearest neighbor
-			var DFS = function(xPos, yPos){
+			var DFS = function(posRef){
+			    //that.analizedPixels.push([xPos,yPos]);
 				//loop through all the neigbor pixels to detect any connected neighbors
+				//spit reference into x and y coords
+				var currRef = posRef;
+				posRef = posRef.split(",");
+				//console.log(posRef);
 				
-				for(var nY = -1; nY < 2; nY++){
-					for(var nX = -1; nX < 2; nX++){
-						var offsetX = xPos + nX;
-						var offsetY = yPos + nY;
-						try{
-							var np = imageBitmapDataArray[offsetX][offsetY];
-							
-							if(np != undefined && np != 'undefined'){
-								if(np[0] != 0){
-									if(that.markedPixels[offsetX+","+offsetY] != undefined && that.markedPixels[offsetX+","+offsetY].marked == true){
-										//do nothing
-									}else{
-										console.log("pixel added - " + offsetX + "," + offsetY);
-										that.markedPixels[offsetX+","+offsetY] = {marked: true};
-										that.dataSet.push(offsetX+","+offsetY);
-										
-										DFS(offsetX, offsetY);
-										return;
-									}
-								}
-							}
-						}catch(e){
-							//do nothing
-						}
-					}
-				}
-			}
+				that.recursiveCounter++;
+				//console.log(that.recursiveCounter);
+				
+                for(var nY = -1; nY < 2; nY++){
+                    for(var nX = 1; nX > -2; nX--){
+                        var offsetX = parseInt(posRef[0]) + nX;
+                        var offsetY = parseInt(posRef[1]) + nY;
+                        var np = undefined;
+                        
+                        if(currRef != (offsetX+","+offsetY)){
+                            np = imageBitmapData[offsetX+","+offsetY];    
+                        }
+                        
+                        //only mark the pixel if it's not the seed/center pixel and it's not already maked
+                        if(typeof np != 'undefined' && typeof that.markedPixels[offsetX+","+offsetY] == 'undefined'){
+                            //console.log(currRef + " -- " + offsetX+ "," + offsetY);
+                            that.markedPixels[offsetX+","+offsetY] = {marked: true};
+                            
+                            //add pixel to blob
+                            that.blob.push([offsetX+","+offsetY, np]);
+                            DFS(offsetX+","+offsetY);
+                            break;
+                        }
+                    }
+                }//end outer for loop...
+			};
 		
-			findBlobs(0,0);
+		
+		    //----------first we find all the blobs-----------//
+			findBlobs();
 			
-			console.log(that.dataSet);
-			//console.log(that.blobs);
-			return imageBitmapDataArray;
+			//-----next we remove any blogs that do not meet our requirements-----//
+			var limit = that.blobs.length;
+			var pointer = 0;
+			
+			while(pointer < limit){
+			    var blob = that.blobs[pointer];
+			    var strong = false;
+			    
+                for(var j=0; j<blob.length; j++){
+                    if(blob[j][1][0] == 255){
+                        strong = true;
+                        break;
+                    }
+                }
+                
+                if(!strong){
+                    that.blobs.splice(pointer, 1);
+                    limit--;
+                }else{
+                    pointer++;
+                }
+                
+			}
+			
+			//now, we now wipe and return the new bitmapData as an object instead of array...
+			imageBitmapData = {};
+			
+			for(var i=0; i< that.blobs.length; i++){
+			    var blob = that.blobs[i];
+			    
+			    for(var j=0; j<blob.length; j++){
+			         imageBitmapData[blob[j][0]] = [255,255,255,255];
+			    }
+			}
+			
+			console.log(imageBitmapData);
+			
+			return imageBitmapData;
 		}
 		
 		//convolution transformation method to change image data and apply effect
