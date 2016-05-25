@@ -125,7 +125,6 @@
 		
 		//renders the image onto a canvas element
 		that.renderImage = function(width, height, imageBitmapData, targetContext){
-		    
 		    if(Array.isArray(imageBitmapData)){
 		        if(imageBitmapData == []){
                     //image data is empty...don't do anything.
@@ -560,9 +559,23 @@
 			return imageData;
 		};
 		
+		that.getCannyEdges = function(width, height, context, blobsOnly){
+		    var imageData = null;
+            imageData = that.getPixelData(width, height, context, true); 
+            imageData = that.matrixTransform('blur', 1, width, height, imageData);
+            imageData = that.getGradientAngleAndDirection(width, height, imageData);
+            imageData = that.setNonMaximumSuppression(width, height, imageData, 0.8, 0.4);
+            
+            if(blobsOnly){
+                 return $ED.setEdgeHysteresis(imageData, true);
+            }else{
+                 return $ED.setEdgeHysteresis(imageData);
+            }
+        }
 		
 		return that; //this returns an instance of the method class
 	}
+	
 	
 	$ED = new _ED();	
 })();

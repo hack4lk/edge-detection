@@ -49,7 +49,7 @@
 			var outputCanvas3 = document.getElementById('resultimageCanvas3');
 			var ctxOutput3 = outputCanvas3.getContext('2d');
 
-			var imageData = [];
+			var imageData = null;
 			var width = 300;
 			var height = 300;
 			$ED.upperThreshold = 60;
@@ -69,6 +69,11 @@
 				var startTime = new Date();
 				startTime = startTime.getTime();
 				
+				imageData = $ED.getCannyEdges(width, height, ctx, false);
+                $ED.renderImage(width, height, imageData, ctxOutput);
+				
+				
+				/*
 				imageData = $ED.getPixelData(width, height, ctx, true); 
 				imageData = $ED.matrixTransform('blur', 1, width, height, imageData);
 				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
@@ -76,8 +81,7 @@
 				
 				var blobs = $ED.setEdgeHysteresis(imageData, true);
 				imageData = $ED.setEdgeHysteresis(imageData);
-				
-				$ED.renderImage(width, height, imageData, ctxOutput);
+				*/
 				
 				//grab all image data (with true flag (last paramter), it converts to grayscale right away)
 				//imageData = $ED.getPixelData(width, height, ctx, true); 
@@ -109,7 +113,7 @@
 				var endTime = new Date();
 				endTime = endTime.getTime();
 				
-				console.log(blobs);
+				//console.log(blobs);
 				
 				var timeDelta = endTime - startTime;
 				timeDelta = "Execution time: "  + (timeDelta/1000) + " sec";
