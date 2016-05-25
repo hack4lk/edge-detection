@@ -336,7 +336,7 @@
 		};
 		
 		//hysteresis 8-point connection method to remove any weak edges not attached to strong edges
-		that.setEdgeHysteresis = function(imageBitmapData){
+		that.setEdgeHysteresis = function(imageBitmapData, returnBlobsOnly){
 			var that = {};
 			var imageData = [];
 			that.blobs = [];
@@ -416,12 +416,12 @@
 			
 			//-----next we remove any blogs that do not meet our requirements-----//
 			var limit = that.blobs.length;
-			var pointer = 0;
-			
-			while(pointer < limit){
-			    var blob = that.blobs[pointer];
-			    var strong = false;
-			    
+            var pointer = 0;
+            
+            while(pointer < limit){
+                var blob = that.blobs[pointer];
+                var strong = false;
+                
                 for(var j=0; j<blob.length; j++){
                     if(blob[j][1][0] == 255){
                         strong = true;
@@ -429,27 +429,34 @@
                     }
                 }
                 
-                if(!strong){
+                if(!strong || blob.length == 1){
                     that.blobs.splice(pointer, 1);
                     limit--;
                 }else{
                     pointer++;
                 }
                 
-			}
+            }
 			
-			//now, we now wipe and return the new bitmapData as an object instead of array...
-			imageBitmapData = {};
 			
-			for(var i=0; i< that.blobs.length; i++){
-			    var blob = that.blobs[i];
+			if(returnBlobsOnly){
+			    return that.blobs;
+			}else{
 			    
-			    for(var j=0; j<blob.length; j++){
-			         imageBitmapData[blob[j][0]] = [255,255,255,255];
-			    }
+                //now, we now wipe and return the new bitmapData as an object instead of array...
+                imageBitmapData = {};
+                
+                for(var i=0; i< that.blobs.length; i++){
+                    var blob = that.blobs[i];
+                    
+                    for(var j=0; j<blob.length; j++){
+                         imageBitmapData[blob[j][0]] = [255,255,255,255];
+                    }
+                }
+			    
+			    return imageBitmapData;
 			}
 			
-			return imageBitmapData;
 		}
 		
 		//convolution transformation method to change image data and apply effect

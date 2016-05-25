@@ -35,7 +35,7 @@
 		
 		<script>
 			var img = new Image();
-			img.src="riddick.jpg";
+			img.src="headshot.jpg";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
@@ -72,8 +72,11 @@
 				imageData = $ED.getPixelData(width, height, ctx, true); 
 				imageData = $ED.matrixTransform('blur', 1, width, height, imageData);
 				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
-				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.7, 0.4);
+				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.8, 0.4);
+				
+				var blobs = $ED.setEdgeHysteresis(imageData, true);
 				imageData = $ED.setEdgeHysteresis(imageData);
+				
 				$ED.renderImage(width, height, imageData, ctxOutput);
 				
 				//grab all image data (with true flag (last paramter), it converts to grayscale right away)
@@ -105,6 +108,8 @@
 				//determine execution time....
 				var endTime = new Date();
 				endTime = endTime.getTime();
+				
+				console.log(blobs);
 				
 				var timeDelta = endTime - startTime;
 				timeDelta = "Execution time: "  + (timeDelta/1000) + " sec";
