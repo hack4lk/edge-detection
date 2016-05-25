@@ -28,14 +28,14 @@
 		
 		<button onclick="renderOutput();">Render Output</button> <br /><br />
 		<div id="timing" style="margin-bottom:15px;">...</div>
-		<canvas id="imageCanvas" width="150" height="150"> </canvas>
-		<canvas id="resultimageCanvas" width="150" height="150"> </canvas>
-		<canvas id="resultimageCanvas2" width="150" height="150"> </canvas>
-		<canvas id="resultimageCanvas3" width="150" height="150"> </canvas>
+		<canvas id="imageCanvas" width="300" height="300"> </canvas>
+		<canvas id="resultimageCanvas" width="300" height="300"> </canvas>
+		<canvas id="resultimageCanvas2" width="300" height="300"> </canvas>
+		<canvas id="resultimageCanvas3" width="300" height="300"> </canvas>
 		
 		<script>
 			var img = new Image();
-			img.src="p3.jpg";
+			img.src="riddick.jpg";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
@@ -50,8 +50,8 @@
 			var ctxOutput3 = outputCanvas3.getContext('2d');
 
 			var imageData = [];
-			var width = 150;
-			var height = 150;
+			var width = 300;
+			var height = 300;
 			$ED.upperThreshold = 60;
 			$ED.lowerThreshold = 30;
 							
@@ -69,28 +69,37 @@
 				var startTime = new Date();
 				startTime = startTime.getTime();
 				
-				//grab all image data (with true flag (last paramter), it converts to grayscale right away)
-				imageData = $ED.getPixelData(width, height, ctx, false); 
-				
-				//convert image to grayscale
-				imageData = $ED.convertImage2grayscale(width, height, imageData); 
-				
-				//we blur the image to initially remove noise artifacts
-				imageData = $ED.matrixTransform('blur', 1, width, height, imageData); //apply the chosen effect
-				
-				//use Sobel convolution kernel to get the gradient for x and y of the image
+				imageData = $ED.getPixelData(width, height, ctx, true); 
+				imageData = $ED.matrixTransform('blur', 1, width, height, imageData);
 				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
+				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.7, 0.4);
+				imageData = $ED.setEdgeHysteresis(imageData);
 				$ED.renderImage(width, height, imageData, ctxOutput);
 				
+				//grab all image data (with true flag (last paramter), it converts to grayscale right away)
+				//imageData = $ED.getPixelData(width, height, ctx, true); 
+				
+				//convert image to grayscale
+				//imageData = $ED.convertImage2grayscale(width, height, imageData); 
+				//$ED.renderImage(width, height, imageData, ctxOutput);
+				
+				//we blur the image to initially remove noise artifacts
+				//imageData = $ED.matrixTransform('blur', 1, width, height, imageData); //apply the chosen effect
+				//$ED.renderImage(width, height, imageData, ctxOutput);
+				
+				//use Sobel convolution kernel to get the gradient for x and y of the image
+				//imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
+				//$ED.renderImage(width, height, imageData, ctxOutput);
+				
 				//set the non-maximum suppression and apply double threshold
-				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.7, 0.4);
-				$ED.renderImage(width, height, imageData, ctxOutput2);
+				//imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.7, 0.4);
+				//$ED.renderImage(width, height, imageData, ctxOutput2);
 				
 				//set the continuity hysteresis of the image
-				imageData = $ED.setEdgeHysteresis(imageData);
+				//imageData = $ED.setEdgeHysteresis(imageData);
 				//image = $ED.removeWeakEdges(width, height, imageData);
 				
-				$ED.renderImage(width, height, imageData, ctxOutput3);
+				//$ED.renderImage(width, height, imageData, ctxOutput3);
 						
 				
 				//determine execution time....

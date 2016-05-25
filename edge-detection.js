@@ -11,15 +11,25 @@
 		//method to return pixel data from passed
 		//image object
 		that.getPixelData = function(width, height, imageContext, convertToGrayscale){
+			//var allImageData = new Uint32Array(ctx.getImageData(0,0,width,height).data.buffer);
+			//var imageData = new Uint32Array(width * height);
 			var imageData = [];
+			var allImageData = imageContext.getImageData(0,0, width, height);
+			var counter = 0;
+			
+			allImageData = allImageData.data;
+			
 			for(var y = 0; y < height; y++){
 				if(imageData[y] == undefined) imageData[y] = [];
 				
 				for(x = 0; x < width; x++){
 					if(imageData[x] == undefined) imageData[x] = [];
-					
-					var pixel = imageContext.getImageData(x, y, 1, 1);
-					pixel = [ pixel.data[0], pixel.data[1], pixel.data[2], pixel.data[3] ];
+					var pixel = [
+					   allImageData[4 * counter + 0],
+					   allImageData[4 * counter + 1],
+					   allImageData[4 * counter + 2],
+					   allImageData[4 * counter + 3],
+					   ];
 					
 					if(convertToGrayscale === true){
 						var grayValue = that.convertPixel2grayscale(pixel);
@@ -27,9 +37,12 @@
 						pixel[1] = grayValue;
 						pixel[2] = grayValue;
 					}
+					
 					imageData[x][y] = pixel;
+					counter++;
 				}
 			}
+
 			return imageData;
 		};
 		
@@ -342,7 +355,6 @@
                 
                     if(typeof that.markedPixels[pixel] != 'undefined' && that.markedPixels[pixel].marked == true){
                         //do nothing....pixel is already marked.
-                        // console.log(that.markedPixels[pixel]);
                     }else{
                         that.blob = [];
                         that.recursiveCounter = 0;
@@ -354,17 +366,7 @@
                         
                         //do a forward pass....
                         DFS(pixel);
-                        
-                        // //now do a reverse pass to make sure we didn't miss any pixels in the grouping...
-                        // if(that.analizedPixels.length > 0){
-                            // that.analizedPixels.reverse();
-                            // for(var r = 0; r < that.analizedPixels.length; r++){
-                                // DFS(that.analizedPixels[r][0], that.analizedPixels[r][1]);
-                                // that.analizedPixels.shift();
-                            // }
-                        // }
-                       // console.log(that.blob);
-                        //add the final blog...
+
                         that.blobs.push(that.blob);
                     }
 			    }
@@ -374,7 +376,7 @@
 			
 			//helper function to find nearest neighbor
 			var DFS = function(posRef){
-			    //that.analizedPixels.push([xPos,yPos]);
+				
 				//loop through all the neigbor pixels to detect any connected neighbors
 				//spit reference into x and y coords
 				var currRef = posRef;
@@ -446,8 +448,6 @@
 			         imageBitmapData[blob[j][0]] = [255,255,255,255];
 			    }
 			}
-			
-			console.log(imageBitmapData);
 			
 			return imageBitmapData;
 		}
@@ -528,22 +528,17 @@
 						
 						for(j=0; j<matrixSize; j++){
 							cord.x = x + j - 1;
-							
-							try{
-								var tempPixel = imageBitmapDataArray[cord.x][cord.y];
-								
-								if(tempPixel != undefined){
-									var r = tempPixel[0] / filterBias;
-									var g = tempPixel[1] / filterBias;
-									var b = tempPixel[2] / filterBias;
-									
-									pixelVal[0] += kernel[j][i] * r * intensity;
-									pixelVal[1] += kernel[j][i] * g * intensity;
-									pixelVal[2] += kernel[j][i] * b * intensity;  
-								}
-							}catch(error){
-								//nothing for now...
-							}
+                                
+                            if(typeof imageBitmapDataArray[cord.x] != 'undefined' && typeof imageBitmapDataArray[cord.x][cord.y] != 'undefined'){
+                                var tempPixel = imageBitmapDataArray[cord.x][cord.y];
+                                var r = tempPixel[0] / filterBias;
+                                var g = tempPixel[1] / filterBias;
+                                var b = tempPixel[2] / filterBias;
+                                
+                                pixelVal[0] += kernel[j][i] * r * intensity;
+                                pixelVal[1] += kernel[j][i] * g * intensity;
+                                pixelVal[2] += kernel[j][i] * b * intensity;  
+                            }
 						}
 					}
 					
