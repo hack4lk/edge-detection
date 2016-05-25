@@ -559,12 +559,18 @@
 			return imageData;
 		};
 		
-		that.getCannyEdges = function(width, height, context, blobsOnly){
+		that.getCannyEdges = function(options){
+		    var width =  options.width;
+		    var height = options.height;
+		    var context = options.context;
+		    var blobsOnly = options.blobsOnly;
+		    var tolerance = options.tolerance;
+		    
 		    var imageData = null;
             imageData = that.getPixelData(width, height, context, true); 
             imageData = that.matrixTransform('blur', 1, width, height, imageData);
             imageData = that.getGradientAngleAndDirection(width, height, imageData);
-            imageData = that.setNonMaximumSuppression(width, height, imageData, 0.8, 0.4);
+            imageData = that.setNonMaximumSuppression(width, height, imageData, tolerance[0], tolerance[1]);
             
             if(blobsOnly){
                  return $ED.setEdgeHysteresis(imageData, true);

@@ -69,7 +69,15 @@
 				var startTime = new Date();
 				startTime = startTime.getTime();
 				
-				imageData = $ED.getCannyEdges(width, height, ctx, false);
+				var options = {
+				    width: 300,
+				    height: 300,
+				    context: ctx,
+				    blobsOnly: false,
+				    tolerance: [0.8, 0.4]
+				}
+				
+				imageData = $ED.getCannyEdges(options);
                 $ED.renderImage(width, height, imageData, ctxOutput);
 				
 				
