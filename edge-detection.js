@@ -11,8 +11,6 @@
 		//method to return pixel data from passed
 		//image object
 		that.getPixelData = function(width, height, imageContext, convertToGrayscale){
-			//var allImageData = new Uint32Array(ctx.getImageData(0,0,width,height).data.buffer);
-			//var imageData = new Uint32Array(width * height);
 			var imageData = [];
 			var allImageData = imageContext.getImageData(0,0, width, height);
 			var counter = 0;
@@ -160,6 +158,51 @@
 		    }
 			
 		};
+		
+		//the live render method draws the image pixel by pixel so one can see how the 
+		//pixel are being rendered on screen and in what order
+		//this only works for data being passed as an object and not array
+		that.liveRender = function(width, height, imageBitmapData, targetContext, speed){
+		    //first paint it all black
+		     for(var y = 0; y < height; y++){
+                for(x = 0; x < width; x++){
+                    var color = 'rgb(0,0,0)';
+                    targetContext.fillStyle = color;
+                    targetContext.fillRect(x, y, 1, 1);
+                }
+		    }
+		    
+		    //now we loop throught the data array
+		    //and paint pixels over top of black
+		    var holder = [];
+		    var counter = 0;
+		    var limit = 0;
+		    
+		    //add all the pixels to array for easy transversal
+		    for(pixel in imageBitmapData){ holder.push(pixel); }
+		    limit = holder.length;
+		    
+		    var renderLivePixel = function(pointer){
+		       if(pointer < limit){
+		           
+		           var pixel = holder[pointer];
+		           pixel = pixel.split(",");
+		           
+		           window.setTimeout(function(){
+		                var color = 'rgb(255,255,255)';
+                        targetContext.fillStyle = color;
+                        targetContext.fillRect(pixel[0], pixel[1], 1, 1);
+		               
+		                counter++;
+                        renderLivePixel(counter);
+		           }, speed);
+		       }else{
+		           console.log("done rendering");
+		       }
+		    }
+		    
+		    renderLivePixel(counter);
+		}
 		
 		
 		//Sobel gradient magnitude function to approximate gradient magnitude
@@ -340,30 +383,25 @@
 			var imageData = [];
 			that.blobs = [];
 			that.markedPixels = {};
-			that.analizedPixels = [];
+			that.multiRoutePixels = [];
             that.blob = [];
             that.validPoints = [];
             that.tempC = 0;
             that.limit = 2;
-            that.recursiveCounter = 0;
+            
+            //console.log(imageBitmapData);
             
 			var findBlobs = function(){
 			    for(item in imageBitmapData){
 			        
 		            var pixel = item;
+		            intersectionPixels = [];
                 
                     if(typeof that.markedPixels[pixel] != 'undefined' && that.markedPixels[pixel].marked == true){
                         //do nothing....pixel is already marked.
                     }else{
                         that.blob = [];
-                        that.recursiveCounter = 0;
-                        //that.analizedPixels = [];
-                        that.markedPixels[pixel] = {marked: true};
-                        
-                        //add seed pixel to blob
-                        that.blob.push([pixel, imageBitmapData[pixel]]);
-                        
-                        //do a forward pass....
+                       
                         DFS(pixel);
 
                         that.blobs.push(that.blob);
@@ -375,38 +413,79 @@
 			
 			//helper function to find nearest neighbor
 			var DFS = function(posRef){
-				
+				var testCountLimit = 8;
+				var counter = 0;
+                var nX = 1;
+				var nY = -1;
+				var intersectCounter = 0;
+				var nextPixel = "";
 				//loop through all the neigbor pixels to detect any connected neighbors
 				//spit reference into x and y coords
 				var currRef = posRef;
 				posRef = posRef.split(",");
-				//console.log(posRef);
 				
-				that.recursiveCounter++;
-				//console.log(that.recursiveCounter);
+				//if current pixel is not marked, mark it...
+				that.markedPixels[posRef[0]+","+posRef[1]] = {marked: true};
+				that.blob.push([ (posRef[0]+","+posRef[1]), (imageBitmapData[posRef[0]+","+posRef[1]]) ]);
 				
-                for(var nY = -1; nY < 2; nY++){
-                    for(var nX = 1; nX > -2; nX--){
-                        var offsetX = parseInt(posRef[0]) + nX;
-                        var offsetY = parseInt(posRef[1]) + nY;
-                        var np = undefined;
+				while(counter < 8){
+				    var offsetX = parseInt(posRef[0]) + nX;
+                    var offsetY = parseInt(posRef[1]) + nY;
+                    var np = undefined;
+                    
+                    if(currRef != (offsetX+","+offsetY)){
+                        np = imageBitmapData[offsetX+","+offsetY];    
+                    }
+                    
+                    //only mark the pixel if it's not the seed/center pixel and it's not already maked
+                    if(typeof np != 'undefined' && typeof that.markedPixels[offsetX+","+offsetY] == 'undefined'){
                         
-                        if(currRef != (offsetX+","+offsetY)){
-                            np = imageBitmapData[offsetX+","+offsetY];    
-                        }
-                        
-                        //only mark the pixel if it's not the seed/center pixel and it's not already maked
-                        if(typeof np != 'undefined' && typeof that.markedPixels[offsetX+","+offsetY] == 'undefined'){
-                            //console.log(currRef + " -- " + offsetX+ "," + offsetY);
+                        if(intersectCounter == 0){ // this means it's the first neighbor pixel found
                             that.markedPixels[offsetX+","+offsetY] = {marked: true};
-                            
                             //add pixel to blob
-                            that.blob.push([offsetX+","+offsetY, np]);
-                            DFS(offsetX+","+offsetY);
-                            break;
+                            nextPixel = offsetX+","+offsetY;
+                            intersectCounter++;
+                        }else{
+                            var lastItem = that.multiRoutePixels[that.multiRoutePixels.length - 1];
+                            var currItem = offsetX+","+offsetY;
+                            if(lastItem != currItem){
+                                that.multiRoutePixels.push(offsetX+","+offsetY); 
+                            }
+                            
+                            intersectCounter++;
                         }
                     }
-                }//end outer for loop...
+                    
+                    if(nX == 1 && nY == 1){
+                         nX--; 
+                    }else if(nX == -1 && nY == 1){
+                         nY--;
+                    }else if(nX == -1 && nY == 0){
+                        nY--;                        
+                    }else if(nX == -1 && nY == -1){
+                        nX++;  
+                    }else if(nX == 0 && nY == 1){
+                        nX--;
+                    }else{
+                        nY++;
+                    }
+				    
+				    counter++;
+				}
+				
+			    if(intersectCounter > 0){
+			        that.blob.push([nextPixel, imageBitmapData[nextPixel]]);
+				    DFS(nextPixel); //only one neighbor pixel was found....go to it
+				}else if(intersectCounter == 0 && that.multiRoutePixels.length > 0){ 
+				    //backtrack to the last intersecting pixel and start from there
+				    nextPixel = that.multiRoutePixels[that.multiRoutePixels.length -1];
+				    that.multiRoutePixels.pop();
+				    that.blob.push([nextPixel, imageBitmapData[nextPixel]]);
+				    DFS(nextPixel); 
+				}else if(intersectCounter == 0){
+                    //no neighboring pixel that have not been marked...end of line!
+                }
+				
 			};
 		
 		
@@ -415,6 +494,7 @@
 			
 			//-----next we remove any blogs that do not meet our requirements-----//
 			var limit = that.blobs.length;
+			//console.log(that.blobs);
             var pointer = 0;
             
             while(pointer < limit){
@@ -437,6 +517,7 @@
                 
             }
 			
+			//console.log(that.blobs.length);
 			
 			if(returnBlobsOnly){
 			    return that.blobs;
@@ -558,6 +639,27 @@
 			
 			return imageData;
 		};
+		
+		//this is great to get dark edges for line art only...
+		that.getStrongEdgesOnly = function(width, height, bitmapData){
+		    var imageData = {};
+		    
+		    for(var y=0; y<height; y++){
+		        for(var x=0; x<width; x++){
+		            var pixel = bitmapData[x][y];
+		            
+		            if(typeof pixel != 'undefined'){
+		                if(pixel[0] == '255'){
+		                    imageData[x+","+y] = pixel;
+		                }
+		            }else{
+		               //console.log(x + ", " + y + " not found.");
+		            }
+		        }
+		    }
+		    
+		    return imageData;
+		}
 		
 		that.getCannyEdges = function(options){
 		    var width =  options.width;

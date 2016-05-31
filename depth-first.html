@@ -28,14 +28,14 @@
 		
 		<button onclick="renderOutput();">Render Output</button> <br /><br />
 		<div id="timing" style="margin-bottom:15px;">...</div>
-		<canvas id="imageCanvas" width="300" height="300"> </canvas>
-		<canvas id="resultimageCanvas" width="300" height="300"> </canvas>
-		<canvas id="resultimageCanvas2" width="300" height="300"> </canvas>
-		<canvas id="resultimageCanvas3" width="300" height="300"> </canvas>
+		<canvas id="imageCanvas" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas2" width="150" height="150"> </canvas>
+		<canvas id="resultimageCanvas3" width="150" height="150"> </canvas>
 		
 		<script>
 			var img = new Image();
-			img.src="headshot.jpg";
+			img.src="bird.png";
 		
 			var canvas = document.getElementById('imageCanvas');
 			var ctx = canvas.getContext('2d');
@@ -50,8 +50,8 @@
 			var ctxOutput3 = outputCanvas3.getContext('2d');
 
 			var imageData = null;
-			var width = 300;
-			var height = 300;
+			var width = 150;
+			var height = 150;
 			$ED.upperThreshold = 60;
 			$ED.lowerThreshold = 30;
 							
@@ -70,19 +70,31 @@
 				startTime = startTime.getTime();
 				
 				var options = {
-				    width: 300,
-				    height: 300,
+				    width: 150,
+				    height: 150,
 				    context: ctx,
 				    blobsOnly: false,
 				    tolerance: [0.8, 0.4]
 				}
 				
-				imageData = $ED.getCannyEdges(options);
-                //$ED.renderImage(width, height, imageData, ctxOutput);
-                $ED.liveRender(width, height, imageData, ctxOutput, 1);
+				//imageData = $ED.getCannyEdges(options);
+               // $ED.renderImage(width, height, imageData, ctxOutput);
 				
-				/*
+				
 				imageData = $ED.getPixelData(width, height, ctx, true); 
+                //console.log(imageData);				
+				imageData = $ED.getStrongEdgesOnly(width, height, imageData);
+				
+				count = $ED.setEdgeHysteresis(imageData, true);
+				
+				imageData = $ED.setEdgeHysteresis(imageData);
+				//$ED.renderImage(width, height, imageData, ctxOutput);
+				
+				$ED.liveRender(width, height, imageData, ctxOutput, 10);
+				//
+				//
+				/*
+				
 				imageData = $ED.matrixTransform('blur', 1, width, height, imageData);
 				imageData = $ED.getGradientAngleAndDirection(width, height, imageData);
 				imageData = $ED.setNonMaximumSuppression(width, height, imageData, 0.8, 0.4);
